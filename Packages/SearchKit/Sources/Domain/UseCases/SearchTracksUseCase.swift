@@ -6,6 +6,9 @@ public struct SearchTracksUseCase: Sendable {
     }
 
     public func execute(query: String) async throws -> [Track] {
-        try await repository.search(query: query)
+        guard !query.allSatisfy(\.isWhitespace) else {
+            return []
+        }
+        return try await repository.search(query: query)
     }
 }
