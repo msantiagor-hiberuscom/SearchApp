@@ -17,7 +17,7 @@ struct SearchTracksUseCaseTests {
         #expect(result == expected)
     }
 
-    @Test("it should return no tracks and skips the repository for a blank query",
+    @Test("it should return no tracks and skip the repository for a blank query",
           arguments: ["", "   ", "\n\t"])
     func blankQuerySkipsRepository(query: String) async throws {
         let repository = TrackRepositorySpy(tracks: [
@@ -29,5 +29,19 @@ struct SearchTracksUseCaseTests {
 
         #expect(result.isEmpty)
         #expect(await repository.receivedQueries.isEmpty)
+    }
+    
+    @Test("it should trim the query",
+          arguments: [(" beatles", "beatles"),
+                      ("beatles ", "beatles"),
+                      ("\tbeatles\n", "beatles"),
+                      (" the beatles ", "the beatles")])
+    func trimsQueryBeforeReturningTracks(query: String, expectedQuery: String) async throws {
+        let repository = TrackRepositorySpy()
+        let sut = SearchTracksUseCase(repository: repository)
+
+        try await sut.execute(query: query)
+        
+        #expect(await repository.receivedQueries == [expectedQuery])
     }
 }

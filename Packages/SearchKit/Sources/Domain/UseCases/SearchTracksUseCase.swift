@@ -1,3 +1,5 @@
+import Foundation
+
 public struct SearchTracksUseCase: Sendable {
     private let repository: any TrackRepository
 
@@ -6,9 +8,8 @@ public struct SearchTracksUseCase: Sendable {
     }
 
     public func execute(query: String) async throws -> [Track] {
-        guard !query.allSatisfy(\.isWhitespace) else {
-            return []
-        }
-        return try await repository.search(query: query)
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else { return [] }
+        return try await repository.search(query: trimmedQuery)
     }
 }
