@@ -40,8 +40,17 @@ struct SearchTracksUseCaseTests {
         let repository = TrackRepositorySpy()
         let sut = SearchTracksUseCase(repository: repository)
 
-        try await sut.execute(query: query)
+        _ = try await sut.execute(query: query)
         
         #expect(await repository.receivedQueries == [expectedQuery])
+    }
+    
+    @Test("it should propagate repository errors")
+    func propagatesRepositoryErrors() async {
+        let sut = SearchTracksUseCase(repository: TrackRepositorySpy(error: TestError.network))
+        
+        await #expect(throws: TestError.network) {
+            try await sut.execute(query: "beatles")
+        }
     }
 }
