@@ -1,5 +1,6 @@
 import Testing
 import Domain
+import Foundation
 @testable import Data
 
 @Suite("CachedTrackRepository")
@@ -48,5 +49,20 @@ struct CachedTrackRepositoryTests {
 
         #expect(result == queen)
         #expect(await remote.receivedQueries == ["beatles", "queen"])
+    }
+    
+    @Test("it should fetch again from the remote once the entry expires",
+    arguments: [(299, ["beatles"]),
+               (300, ["beatles", "beatles"])])
+    func fetchesAgaingWhenCacheExpires(elapsed: TimeInterval, expectedQueries: [String]) async throws {
+        let remote = TrackRepositorySpy(tracks: [Track(id: 1, name: "Yesterday", artistName: "The Beatles")])
+        let dateProvider = DateProviderStub()
+        let sut = CachedTrackRepository(remote: remote, now: { dateProvider.now })
+        
+        _ = try await sut.search(query: "beatles")
+        dateProvider.advance(by: elapsed)
+        _ = try await sut.search(query: "beatles")
+        
+        #expect(await remote.receivedQueries == expectedQueries)
     }
 }

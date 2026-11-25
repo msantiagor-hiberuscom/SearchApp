@@ -10,8 +10,8 @@ import PackageDescription
 let package = Package(
     name: "SearchKit",
     platforms: [
-        .iOS(.v17),
-        .macOS(.v14), // lets `swift test` run without a simulator
+        .iOS(.v18),
+        .macOS(.v15), // lets `swift test` run without a simulator
     ],
     products: [
         .library(name: "Domain", targets: ["Domain"]),
