@@ -65,4 +65,19 @@ struct CachedTrackRepositoryTests {
         
         #expect(await remote.receivedQueries == expectedQueries)
     }
+    
+    @Test("it should not cache remote errors")
+    func doestNotCacheRemoteErrors() async throws {
+        let tracks = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
+        let remote = TrackRepositorySpy(results: [.failure(TestError.network), .success(tracks)])
+        let sut = CachedTrackRepository(remote: remote)
+        
+        await #expect(throws: TestError.network) {
+            _ = try await sut.search(query: "beatles")
+        }
+        let result = try await sut.search(query: "beatles")
+        
+        #expect(await remote.receivedQueries == ["beatles", "beatles"])
+        #expect(result == tracks)
+    }
 }
