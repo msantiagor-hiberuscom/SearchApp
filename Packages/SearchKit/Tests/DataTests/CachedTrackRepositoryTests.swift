@@ -54,7 +54,7 @@ struct CachedTrackRepositoryTests {
     @Test("it should fetch again from the remote once the entry expires",
     arguments: [(299, ["beatles"]),
                (300, ["beatles", "beatles"])])
-    func fetchesAgaingWhenCacheExpires(elapsed: TimeInterval, expectedQueries: [String]) async throws {
+    func fetchesAgainWhenCacheExpires(elapsed: TimeInterval, expectedQueries: [String]) async throws {
         let remote = TrackRepositorySpy(tracks: [Track(id: 1, name: "Yesterday", artistName: "The Beatles")])
         let dateProvider = DateProviderStub()
         let sut = CachedTrackRepository(remote: remote, now: { dateProvider.now })
@@ -67,7 +67,7 @@ struct CachedTrackRepositoryTests {
     }
     
     @Test("it should not cache remote errors")
-    func doestNotCacheRemoteErrors() async throws {
+    func doesNotCacheRemoteErrors() async throws {
         let tracks = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
         let remote = TrackRepositorySpy(results: [.failure(TestError.network), .success(tracks)])
         let sut = CachedTrackRepository(remote: remote)
@@ -79,5 +79,30 @@ struct CachedTrackRepositoryTests {
         
         #expect(await remote.receivedQueries == ["beatles", "beatles"])
         #expect(result == tracks)
+    }
+    
+    @Test("it should refresh the entry once it expires")
+    func refreshesEntryOnceExpired() async throws {
+        let firstVersion = [
+            Track(id: 1, name: "Yesterday", artistName: "The Beatles"),
+            Track(id: 2, name: "Let It Be", artistName: "The Beatles"),
+        ]
+        let secondVersion = [
+            Track(id: 1, name: "Yesterday", artistName: "The Beatles"),
+            Track(id: 4, name: "Hey Jude", artistName: "The Beatles"),
+        ]
+        let dateProvider = DateProviderStub()
+        let remote = TrackRepositorySpy(results: [.success(firstVersion), .success(secondVersion)])
+        let sut = CachedTrackRepository(remote: remote, now: { dateProvider.now })
+        
+        _ = try await sut.search(query: "beatles")
+        dateProvider.advance(by: 300)
+        let secondSearch = try await sut.search(query: "beatles")
+        dateProvider.advance(by: 299)
+        let thirdSearch = try await sut.search(query: "beatles")
+        
+        #expect(secondSearch == secondVersion)
+        #expect(thirdSearch == secondVersion)
+        #expect(await remote.receivedQueries == ["beatles", "beatles"])
     }
 }
