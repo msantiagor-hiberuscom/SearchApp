@@ -35,4 +35,18 @@ struct CachedTrackRepositoryTests {
         #expect(result == expected)
         #expect(await remote.receivedQueries == ["beatles"])
     }
+
+    @Test("it should keep a separate cache entry for each query")
+    func keepsSeparateEntryPerQuery() async throws {
+        let beatles = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
+        let queen = [Track(id: 3, name: "Bohemian Rhapsody", artistName: "Queen")]
+        let remote = TrackRepositorySpy(tracksByQuery: ["beatles": beatles, "queen": queen])
+        let sut = CachedTrackRepository(remote: remote)
+
+        _ = try await sut.search(query: "beatles")
+        let result = try await sut.search(query: "queen")
+
+        #expect(result == queen)
+        #expect(await remote.receivedQueries == ["beatles", "queen"])
+    }
 }
