@@ -49,4 +49,36 @@ struct ITunesTrackRepositoryTests {
         
         #expect(result == expectedTracks)
     }
+    
+    @Test("it should propagate client errors")
+    func propagatesClientErrors() async throws {
+        let client = HTTPClientSpy(error: URLError(.cannotConnectToHost))
+        let sut = ITunesTrackRepository(client: client)
+        
+        await #expect(throws: URLError(.cannotConnectToHost)) {
+            try await sut.search(query: "beatles")
+        }
+    }
+
+    @Test("it should throw when the response status is not 2xx",
+          arguments: [199, 300, 404, 500])
+    func throwsOnNon2xxStatus(statusCode: Int) async throws {
+        let client = HTTPClientSpy(statusCode: statusCode)
+        let sut = ITunesTrackRepository(client: client)
+
+        await #expect(throws: URLError(.badServerResponse)) {
+            try await sut.search(query: "beatles")
+        }
+    }
+
+    @Test("it should throw when the response is not valid JSON")
+    func throwsOnInvalidJSON() async throws {
+        let client = HTTPClientSpy(data: Data("not json".utf8))
+        let sut = ITunesTrackRepository(client: client)
+
+        let error = await #expect(throws: URLError.self) {
+            try await sut.search(query: "beatles")
+        }
+        #expect(error?.code == .cannotParseResponse)
+    }
 }

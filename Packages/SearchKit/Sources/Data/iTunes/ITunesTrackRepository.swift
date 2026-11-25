@@ -19,9 +19,24 @@ public struct ITunesTrackRepository: TrackRepository {
         guard let url = urlComponents?.url else {
             throw URLError(.badURL)
         }
-        let (data, _) = try await client.data(from: url)
-        let response = try JSONDecoder().decode(ITunesResponse.self, from: data)
-        return response.results.map(\.toTrack)
+        
+        let (data, response) = try await client.data(from: url)
+        guard let response = response as? HTTPURLResponse, response.isSuccess else {
+            throw URLError(.badServerResponse)
+        }
+        
+        do {
+            let iTunesResponse = try JSONDecoder().decode(ITunesResponse.self, from: data)
+            return iTunesResponse.results.map(\.toTrack)
+        } catch {
+            throw URLError(.cannotParseResponse, userInfo: [NSUnderlyingErrorKey: error])
+        }
+    }
+}
+
+private extension HTTPURLResponse {
+    var isSuccess: Bool {
+        (200..<300).contains(statusCode)
     }
 }
 
