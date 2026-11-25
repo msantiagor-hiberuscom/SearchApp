@@ -13,10 +13,30 @@ public struct ITunesTrackRepository: TrackRepository {
     }
     
     public func search(query: String) async throws -> [Track] {
-        guard let url = URL(string: "https://itunes.apple.com/search?term=beatles&entity=song") else {
+        var urlComponents = URLComponents(string: "https://itunes.apple.com/search")
+        urlComponents?.queryItems = [URLQueryItem(name: "term", value: query),
+                                     URLQueryItem(name: "entity", value: "song")]
+        guard let url = urlComponents?.url else {
             throw URLError(.badURL)
         }
-        _ = try await client.data(from: url)
-        return []
+        let (data, _) = try await client.data(from: url)
+        let response = try JSONDecoder().decode(ITunesResponse.self, from: data)
+        return response.results.map(\.toTrack)
+    }
+}
+
+private struct ITunesResponse: Decodable {
+    let results: [ITunesTrack]
+}
+
+private struct ITunesTrack: Decodable {
+    let trackId: Int
+    let trackName: String
+    let artistName: String
+}
+
+private extension ITunesTrack {
+    var toTrack: Track {
+        Track(id: trackId, name: trackName, artistName: artistName)
     }
 }
