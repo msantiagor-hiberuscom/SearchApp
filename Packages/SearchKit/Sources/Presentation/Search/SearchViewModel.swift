@@ -5,6 +5,8 @@ import Observation
 @Observable
 public final class SearchViewModel {
     public private(set) var tracks: [Track] = []
+    public private(set) var searchFailed = false
+    
     private let searchTracks: SearchTracksUseCase
 
     public init(searchTracks: SearchTracksUseCase) {
@@ -16,6 +18,8 @@ public final class SearchViewModel {
             let result = try await searchTracks.execute(query: query)
             guard !Task.isCancelled else { return }
             tracks = result
-        } catch { }
+        } catch {
+            searchFailed = true
+        }
     }
 }

@@ -33,7 +33,7 @@ struct SearchViewModelTests {
     }
     
     @Test("it should not publish the results of a cancelled search that succeeds")
-    func doesNotPublishResultsOfCancelledSearchThatSucceeds() async throws {
+    func doesNotPublishResultsOfCancelledSearchThatSucceeds() async {
         let beat = [
             Track(id: 3, name: "Dance to me beat", artistName: "James Brown"),
             Track(id: 1, name: "Yesterday", artistName: "The Beatles")
@@ -48,5 +48,15 @@ struct SearchViewModelTests {
         await search.value
 
         #expect(sut.tracks == beat)
+    }
+    
+    @Test("it should report an error when the search fails")
+    func reportsErrorWhenSearchFails() async {
+        let repository = TrackRepositorySpy(error: TestError.network)
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        
+        await sut.search(query: "beatles")
+        
+        #expect(sut.searchFailed)
     }
 }
