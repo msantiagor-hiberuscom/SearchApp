@@ -71,4 +71,17 @@ struct SearchViewModelTests {
 
         #expect(!sut.searchFailed)
     }
+
+    @Test("it should clear the error when a new search starts")
+    func clearsErrorWhenNewSearchStarts() async throws {
+        let tracks = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
+        let repository = TrackRepositorySpy(results: [.failure(TestError.network), .success(tracks)])
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        await sut.search(query: "beatles")
+        try #require(sut.searchFailed)
+
+        await sut.search(query: "beatles")
+
+        #expect(!sut.searchFailed)
+    }
 }

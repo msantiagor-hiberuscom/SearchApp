@@ -14,6 +14,7 @@ public final class SearchViewModel {
     }
 
     public func search(query: String) async {
+        searchFailed = false
         do {
             let result = try await searchTracks.execute(query: query)
             guard !Task.isCancelled else { return }
