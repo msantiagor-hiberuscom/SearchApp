@@ -5,8 +5,7 @@ import Observation
 @Observable
 public final class SearchViewModel {
     public private(set) var state: SearchState = .idle
-    public private(set) var tracks: [Track] = []
-    public private(set) var searchFailed = false
+    private var latestSearchId = 0
     private(set) var searchTask: Task<Void, Never>?
     
     private let searchTracks: SearchTracksUseCase
@@ -25,6 +24,7 @@ public final class SearchViewModel {
     }
     
     public func startSearch(query: String) {
+        latestSearchId += 1
         searchTask?.cancel()
         searchTask = Task {
             do { try await sleep(debounce) } catch { return }
@@ -34,17 +34,37 @@ public final class SearchViewModel {
     }
 
     func search(query: String) async {
-        searchFailed = false
-        state = .loading
+        let searchId = latestSearchId
+        let previousState = state
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            state = .idle
+            return
+        }
+        state = .loading(displayedTracks)
         do {
             let result = try await searchTracks.execute(query: query)
-            guard !Task.isCancelled else { return }
-            tracks = result
+            guard !Task.isCancelled else {
+                if searchId == latestSearchId {
+                    state = previousState
+                }
+                return
+            }
             state = result.isEmpty ? .empty : .loaded(result)
         } catch {
-            guard !Task.isCancelled else { return }
-            searchFailed = true
+            guard !Task.isCancelled else {
+                if searchId == latestSearchId {
+                    state = previousState
+                }
+                return
+            }
             state = .failed
+        }
+    }
+
+    private var displayedTracks: [Track] {
+        switch state {
+        case .loaded(let tracks), .loading(let tracks): tracks
+        case .idle, .empty, .failed: []
         }
     }
 }

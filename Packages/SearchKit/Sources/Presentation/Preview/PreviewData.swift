@@ -21,13 +21,16 @@ extension Track {
 }
 
 struct PreviewTrackRepository: TrackRepository {
+    var tracks: [Track] = [.previewYesterday, .previewWithoutDetails]
+    var delay: Duration = .zero
     var fails = false
 
     func search(query: String) async throws -> [Track] {
+        try await Task.sleep(for: delay)
         if fails {
             throw URLError(.notConnectedToInternet)
         }
-        return [.previewYesterday, .previewWithoutDetails]
+        return tracks
     }
 }
 #endif

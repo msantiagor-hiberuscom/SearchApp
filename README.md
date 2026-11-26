@@ -54,7 +54,10 @@ The view calls `SearchViewModel.startSearch(query:)` every time the text changes
 1. **cancels the previous task** before starting the new one. Cancellation reaches the network request, because `URLSession` cancels its request when its task is cancelled;
 2. **debounces the search**: each task waits 300 ms before calling the use case, so a query replaced while typing is cancelled during the wait and never reaches the network. The wait is injected, so tests do not sleep;
 3. **never publishes the outcome of a cancelled search.** After the use case returns it checks `Task.isCancelled` before touching the state. A thrown error is not enough on its own: a cache hit answers immediately and does not throw even if its task was cancelled;
-4. **does not report a cancellation as a failure.** The same check runs in the `catch`, so only real errors set `searchFailed`, which the view shows as an error message.
+4. **does not report a cancellation as a failure.** The same check runs in the `catch`, so only real errors move the state to `failed`;
+5. **restores the previous state when the latest search is cancelled**, so a cancellation never leaves the screen loading. Each search takes a number when it is scheduled, before the debounce; a cancelled search restores only if no newer one has started since, otherwise it would hide the newer search's results.
+
+The view model publishes a single `SearchState` (`idle`, `loading(tracks)`, `loaded(tracks)`, `empty`, `failed`) that the view switches on, so it cannot show an error and a list at the same time. A blank query goes back to `idle` without calling the use case. While a search runs, `loading` keeps the tracks already on screen, so the list stays visible with a small spinner in the toolbar instead of flashing.
 
 The worst case, an older search that finishes after the newer one, is tested deterministically: a controllable repository double makes each search wait until the test completes it, in whatever order the test chooses.
 
@@ -69,11 +72,11 @@ The worst case, an older search that finishes after the newer one, is tested det
 
 ## Tests
 
-30 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
+36 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
 
 - **Domain (4)**: the use case against a mocked repository: results, blank queries, trimming and error propagation.
 - **Data (13)**: cache hits, misses, one entry per query, expiry at the exact TTL, refresh and errors not cached; URL building, mapping (including the larger artwork URL), HTTP status and invalid JSON for the iTunes repository.
-- **Presentation (13)**: publishing results, cancelled searches, error state, cancelling the previous search, debouncing and the out-of-order case; the rows and date formatting of the detail screen.
+- **Presentation (19)**: every search state (idle, loading, loaded, empty, failed, blank query), cancelled searches, cancelling the previous search, debouncing and the out-of-order case; the rows and date formatting of the detail screen.
 
 The views have SwiftUI previews and were checked by hand in the simulator.
 
@@ -81,9 +84,7 @@ The views have SwiftUI previews and were checked by hand in the simulator.
 
 Kept out on purpose to keep the test small:
 
-- **No loading state or "no results" message**: without a loading state, a "no results" message would flash while each search runs.
 - **The cache never evicts**: expired entries are replaced when the same query is searched again, but never removed. Fine for a session; a long-lived app would need a size limit.
 - **No in-flight deduplication**: two simultaneous searches for the same query that both miss the cache both reach the network.
 - **The search task is not cancelled when the view model goes away**: it keeps the view model alive until it finishes, which is short.
-- **The detail screen** uses the 100×100 artwork from the API, which looks soft at its size, and shows the track name both as the title and in the header.
 - **UI strings are in English** and not localised. Dates follow the device locale and are shown in UTC, because iTunes release dates are calendar days in UTC.

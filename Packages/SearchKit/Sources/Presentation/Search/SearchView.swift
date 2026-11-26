@@ -13,6 +13,11 @@ public struct SearchView: View {
         NavigationStack {
             content
                 .navigationTitle("Search")
+                .toolbar {
+                    if case .loading(let tracks) = viewModel.state, !tracks.isEmpty {
+                        ProgressView()
+                    }
+                }
                 .navigationDestination(for: Track.self) { track in
                     TrackDetailView(track: track)
                 }
@@ -25,18 +30,29 @@ public struct SearchView: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.searchFailed {
+        switch viewModel.state {
+        case .idle:
+            ContentUnavailableView(
+                "Search for music",
+                systemImage: "music.note",
+                description: Text("Find songs by title, artist or album.")
+            )
+        case .loading(let tracks) where tracks.isEmpty:
+            ProgressView()
+        case .loading(let tracks), .loaded(let tracks):
+            List(tracks) { track in
+                NavigationLink(value: track) {
+                    TrackRow(track: track)
+                }
+            }
+        case .empty:
+            ContentUnavailableView.search(text: query)
+        case .failed:
             ContentUnavailableView(
                 "Search failed",
                 systemImage: "exclamationmark.triangle",
                 description: Text("Check your connection and try again.")
             )
-        } else {
-            List(viewModel.tracks) { track in
-                NavigationLink(value: track) {
-                    TrackRow(track: track)
-                }
-            }
         }
     }
 }
@@ -45,6 +61,18 @@ public struct SearchView: View {
 #Preview("Results") {
     SearchView(viewModel: SearchViewModel(
         searchTracks: SearchTracksUseCase(repository: PreviewTrackRepository())
+    ))
+}
+
+#Preview("No results") {
+    SearchView(viewModel: SearchViewModel(
+        searchTracks: SearchTracksUseCase(repository: PreviewTrackRepository(tracks: []))
+    ))
+}
+
+#Preview("Loading") {
+    SearchView(viewModel: SearchViewModel(
+        searchTracks: SearchTracksUseCase(repository: PreviewTrackRepository(delay: .seconds(60)))
     ))
 }
 

@@ -23,9 +23,26 @@ struct SearchViewModelTests {
         let search = Task { await sut.search(query: "beatles") }
         await repository.waitForRequest(query: "beatles")
 
-        #expect(sut.state == .loading)
+        #expect(sut.state == .loading([]))
         await repository.complete(query: "beatles", with: [])
         await search.value
+    }
+
+    @Test("it should keep the current tracks while the next search is in flight", .timeLimit(.minutes(1)))
+    func keepsCurrentTracksWhileNextSearchIsInFlight() async {
+        let queen = [Track(id: 3, name: "Bohemian Rhapsody", artistName: "Queen")]
+        let repository = ControllableTrackRepository()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        let firstSearch = Task { await sut.search(query: "queen") }
+        await repository.complete(query: "queen", with: queen)
+        await firstSearch.value
+
+        let nextSearch = Task { await sut.search(query: "queens") }
+        await repository.waitForRequest(query: "queens")
+
+        #expect(sut.state == .loading(queen))
+        await repository.complete(query: "queens", with: [])
+        await nextSearch.value
     }
 
     @Test("it should be loaded with the tracks found for the query")
@@ -59,15 +76,17 @@ struct SearchViewModelTests {
         #expect(sut.state == .failed)
     }
 
-    @Test("it should publish the tracks found for the query")
-    func publishesTracksFoundForQuery() async {
+    @Test("it should go back to idle when the query is blank", arguments: ["", "   ", "\n"])
+    func goesBackToIdleWhenQueryIsBlank(query: String) async throws {
         let tracks = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
         let repository = TrackRepositorySpy(tracks: tracks)
         let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
-
         await sut.search(query: "beatles")
+        try #require(sut.state == .loaded(tracks))
 
-        #expect(sut.tracks == tracks)
+        await sut.search(query: query)
+
+        #expect(sut.state == .idle)
     }
 
     @Test("it should keep the current results when a search is cancelled")
@@ -82,7 +101,7 @@ struct SearchViewModelTests {
         search.cancel()
         await search.value
 
-        #expect(sut.tracks == queen)
+        #expect(sut.state == .loaded(queen))
     }
     
     @Test("it should not publish the results of a cancelled search that succeeds")
@@ -100,17 +119,7 @@ struct SearchViewModelTests {
         search.cancel()
         await search.value
 
-        #expect(sut.tracks == beat)
-    }
-    
-    @Test("it should report an error when the search fails")
-    func reportsErrorWhenSearchFails() async {
-        let repository = TrackRepositorySpy(error: TestError.network)
-        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
-        
-        await sut.search(query: "beatles")
-        
-        #expect(sut.searchFailed)
+        #expect(sut.state == .loaded(beat))
     }
     
     @Test("it should not report an error when a search is cancelled")
@@ -122,20 +131,20 @@ struct SearchViewModelTests {
         search.cancel()
         await search.value
 
-        #expect(!sut.searchFailed)
+        #expect(sut.state == .idle)
     }
 
-    @Test("it should clear the error when a new search starts")
-    func clearsErrorWhenNewSearchStarts() async throws {
+    @Test("it should recover from an error on the next search")
+    func recoversFromErrorOnNextSearch() async throws {
         let tracks = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
         let repository = TrackRepositorySpy(results: [.failure(TestError.network), .success(tracks)])
         let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
         await sut.search(query: "beatles")
-        try #require(sut.searchFailed)
+        try #require(sut.state == .failed)
 
         await sut.search(query: "beatles")
 
-        #expect(!sut.searchFailed)
+        #expect(sut.state == .loaded(tracks))
     }
     
     @Test("it should cancel the previous search when a new one starts")
@@ -169,9 +178,27 @@ struct SearchViewModelTests {
         await repository.complete(query: "beat", with: beat)
         await olderSearch.value
         
-        #expect(sut.tracks == beatles)
+        #expect(sut.state == .loaded(beatles))
     }
     
+    @Test("it should keep loading when a replaced search finishes during the next debounce", .timeLimit(.minutes(1)))
+    func keepsLoadingWhenReplacedSearchFinishesDuringNextDebounce() async throws {
+        let repository = ControllableTrackRepository()
+        let sleep = SleepGate(passingCalls: 1)
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository), sleep: sleep.sleep(_:))
+        sut.startSearch(query: "que")
+        let replacedSearch = try #require(sut.searchTask)
+        await repository.waitForRequest(query: "que")
+
+        sut.startSearch(query: "queu")
+        await repository.complete(query: "que", with: [])
+        await replacedSearch.value
+
+        #expect(sut.state == .loading([]))
+        sut.searchTask?.cancel()
+        await sut.searchTask?.value
+    }
+
     @Test("it should wait for the debounce interval before searching")
     func waitsForTheDebounceIntervalBeforeSearching() async {
         let repository = TrackRepositorySpy()
