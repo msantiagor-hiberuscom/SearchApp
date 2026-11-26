@@ -35,7 +35,6 @@ Deliverables: the repository with code and tests, and a short README covering th
 ### Git
 
 - [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/): `type(scope): description`, lowercase, imperative. Scopes: `domain`, `data`, `presentation`, `app`. Use `test` when a cycle adds only tests, `feat` when it adds behaviour (test and code go in the same commit), `build` for the Xcode project, `docs` for the README.
-- No attribution of any kind: no `Co-Authored-By`, no "Generated with" lines.
 - The git identity is already set in the repository's local config. Do not pass `-c user.email` or change it.
 - The remote is `origin` on GitHub. Push only when the user asks.
 

@@ -6,6 +6,59 @@ import Domain
 @Suite("SearchViewModel")
 struct SearchViewModelTests {
 
+    @Test("it should start in the idle state")
+    func startsInIdleState() {
+        let repository = TrackRepositorySpy()
+
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+
+        #expect(sut.state == .idle)
+    }
+
+    @Test("it should be loading while a search is in flight", .timeLimit(.minutes(1)))
+    func isLoadingWhileSearchIsInFlight() async {
+        let repository = ControllableTrackRepository()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+
+        let search = Task { await sut.search(query: "beatles") }
+        await repository.waitForRequest(query: "beatles")
+
+        #expect(sut.state == .loading)
+        await repository.complete(query: "beatles", with: [])
+        await search.value
+    }
+
+    @Test("it should be loaded with the tracks found for the query")
+    func isLoadedWithTracksFoundForQuery() async {
+        let tracks = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
+        let repository = TrackRepositorySpy(tracks: tracks)
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+
+        await sut.search(query: "beatles")
+
+        #expect(sut.state == .loaded(tracks))
+    }
+
+    @Test("it should be empty when the search finds no tracks")
+    func isEmptyWhenSearchFindsNoTracks() async {
+        let repository = TrackRepositorySpy(tracks: [])
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+
+        await sut.search(query: "zzzzzz")
+
+        #expect(sut.state == .empty)
+    }
+
+    @Test("it should be failed when the search throws")
+    func isFailedWhenSearchThrows() async {
+        let repository = TrackRepositorySpy(error: TestError.network)
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+
+        await sut.search(query: "beatles")
+
+        #expect(sut.state == .failed)
+    }
+
     @Test("it should publish the tracks found for the query")
     func publishesTracksFoundForQuery() async {
         let tracks = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
