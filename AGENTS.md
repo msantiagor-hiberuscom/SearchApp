@@ -37,7 +37,7 @@ Deliverables: the repository with code and tests, and a short README covering th
 - [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/): `type(scope): description`, lowercase, imperative. Scopes: `domain`, `data`, `presentation`, `app`. Use `test` when a cycle adds only tests, `feat` when it adds behaviour (test and code go in the same commit), `build` for the Xcode project, `docs` for the README.
 - No attribution of any kind: no `Co-Authored-By`, no "Generated with" lines.
 - The git identity is already set in the repository's local config. Do not pass `-c user.email` or change it.
-- No remote yet. Do not push.
+- The remote is `origin` on GitHub. Push only when the user asks.
 
 ### Code
 
@@ -56,8 +56,8 @@ Deliverables: the repository with code and tests, and a short README covering th
 - Test doubles live in a `TestDoubles/` folder of each test target. There is no shared test-support target, so each target has its own `TrackRepositorySpy` and `TestError`, with only the features its tests need. Doubles with recorded state are actors (or `Sendable` classes backed by `Mutex`, like `DateProviderStub`).
 - Prefer exact assertions (`receivedQueries == ["beatles"]`) over predicates that pass on empty collections (`allSatisfy`).
 - Compare `URLError`s by `code`, not by equality: equality also compares `userInfo`, which may carry the underlying error.
-- Time is injected (`now: @Sendable () -> Date`), never waited for.
-- To force an order between concurrent operations use `ControllableTrackRepository` (Presentation tests): each search waits until the test calls `complete(query:with:)`. Tests that can wait forever get `.timeLimit(.minutes(1))`.
+- Time is injected (`now: @Sendable () -> Date`, `sleep: @Sendable (Duration) async throws -> Void`), never waited for. Tests that do not check the debounce pass `sleep: { _ in }`; the debounce test records durations with `SleepSpy`.
+- To force an order between concurrent operations use `ControllableTrackRepository` (Presentation tests): each search waits until the test calls `complete(query:with:)`, and `waitForRequest(query:)` suspends until a search has reached it. Tests that can wait forever get `.timeLimit(.minutes(1))`.
 
 ## Architecture
 
@@ -120,19 +120,19 @@ iTunes Search API: `https://itunes.apple.com/search?term=<query>&entity=song`. N
 ### Presentation
 
 - `TrackDetail` (internal struct) turns a `Track` into the rows of the detail screen: `fields` lists Album, Genre and Released in that order, omits missing values, and formats the release date with the given locale (default `.current`) always in UTC, because iTunes release dates are calendar days in UTC and the device time zone could shift them by a day. Labels are plain English strings, not localised yet.
-- `SearchViewModel` is `@MainActor @Observable`, takes a `SearchTracksUseCase` and publishes `tracks`. `search(query:) async` ignores the outcome of a cancelled search: it checks `Task.isCancelled` after the use case returns (a cache hit answers even when cancelled). It resets `searchFailed` when a search starts and, on a thrown error, sets it to `true` without touching `tracks`, unless the task was cancelled. `startSearch(query:)` is the entry point for the view: it cancels the task in `searchTask` (internal `private(set)`, visible to tests) and starts a new one that calls `search(query:)`, which is `internal` so the view cannot bypass the cancellation (tests reach it through `@testable`). `searchFailed` is a `Bool`: the view, not the view model, owns the error text.
+- `SearchViewModel` is `@MainActor @Observable`, takes a `SearchTracksUseCase` and publishes `tracks`. The public initialiser takes an optional `debounce: Duration` and uses `Task.sleep`; an internal one also takes the `sleep` closure for tests. `search(query:) async` ignores the outcome of a cancelled search: it checks `Task.isCancelled` after the use case returns (a cache hit answers even when cancelled). It resets `searchFailed` when a search starts and, on a thrown error, sets it to `true` without touching `tracks`, unless the task was cancelled. `startSearch(query:)` is the entry point for the view: it cancels the task in `searchTask` (internal `private(set)`, visible to tests) and starts a new one that waits for the debounce (default 300 ms), returns if it was cancelled meanwhile (`Task.sleep` throws, and a `guard !Task.isCancelled` covers sleeps that do not), and then calls `search(query:)`, which is `internal` so the view cannot bypass the cancellation (tests reach it through `@testable`). `searchFailed` is a `Bool`: the view, not the view model, owns the error text.
 - Views (SwiftUI, no unit tests, `#Preview`s backed by `Preview/PreviewData.swift`, which is `#if DEBUG`): `SearchView` is the only public view. It owns the query in `@State`, calls `startSearch(query:)` from `.onChange(of:)`, shows a `ContentUnavailableView` instead of the list when `searchFailed`, and navigates with `NavigationLink(value:)` to `TrackDetailView`, whose navigation title is inline on iOS so the track name does not show twice. `TrackRow` and `TrackDetailView` share `ArtworkView` (`AsyncImage` with a music-note placeholder). Checked by hand in the iPhone 17 simulator: typing "queen" letter by letter shows only Queen results with artwork, and the detail shows artwork, name, artist, album, genre and release date. The error message has not been seen in the app (no way to cut the simulator's network); tests and the "Failure" preview cover it.
 
 ## Current state
 
-Domain and Data are complete. Presentation has 11 tests (8 for `SearchViewModel`, 3 for `TrackDetail`). 28 tests pass (Domain 4, Data 13, Presentation 11). Every functional requirement works in the app, and every deliverable is in the repository: code, tests and `README.md`. `AGENTS.md` and `CLAUDE.md` are committed too, on purpose: they document how the project was built. Run `git log` for the latest commit.
+Domain and Data are complete. Presentation has 13 tests (10 for `SearchViewModel`, 3 for `TrackDetail`). 30 tests pass (Domain 4, Data 13, Presentation 13). Every functional requirement works in the app, and every deliverable is in the repository: code, tests and `README.md`. `AGENTS.md` and `CLAUDE.md` are committed too, on purpose: they document how the project was built. Run `git log` for the latest commit.
 
 Known issues. Most are accepted limitations listed in the README's "Known limitations" section; keep both lists in sync when one is fixed or added:
 
 - The search `Task` keeps the view model alive until it finishes and is not cancelled on deinit. Accepted (searches are short); in the README.
 - `CachedTrackRepository` stores the TTL in a property misspelt `timeTolive`.
 - The trimming test is still named "it should trim the query" / `trimsQueryBeforeReturningTracks`; "it should pass the trimmed query to the repository" / `trimsQueryBeforeSearching` would be more precise.
-- Still to decide: whether `tracks` is cleared on a real error. Optional: debouncing (every keystroke starts a search and cancels the previous one), a loading state and a "no results" message (without a loading state it would flash while each search runs), localised UI strings.
+- Still to decide: whether `tracks` is cleared on a real error. Optional: a loading state and a "no results" message (without a loading state it would flash while each search runs), localised UI strings.
 - Two concurrent misses for the same query both reach the remote (actor reentrancy, no in-flight deduplication). Accepted; in the README.
 - The cache never evicts: expired entries are replaced when the same query is searched again, but never removed. Accepted; in the README.
 
@@ -141,4 +141,4 @@ Known issues. Most are accepted limitations listed in the README's "Known limita
 The coding test is complete. Remaining work is optional; do it only if the user asks:
 
 1. **Polish**: the `timeTolive` typo and the trimming test name.
-2. **Accepted limitations** from the README (debounce, loading and "no results" states, cache eviction, in-flight deduplication), each one test-first and removed from the README's list when done.
+2. **Accepted limitations** from the README (loading and "no results" states, cache eviction, in-flight deduplication), each one test-first and removed from the README's list when done.
