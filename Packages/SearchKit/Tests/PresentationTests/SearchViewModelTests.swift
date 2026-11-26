@@ -97,4 +97,24 @@ struct SearchViewModelTests {
         #expect(previousSearch.isCancelled)
         await sut.searchTask?.value
     }
+    
+    @Test("it should not publish the results of an older search that finishes last", .timeLimit(.minutes(1)))
+    func ignoresOlderSearchThatFinishesLast() async throws {
+        let beat = [Track(id: 3, name: "Dance to me beat", artistName: "James Brown")]
+        let beatles = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
+        let repository = ControllableTrackRepository()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        
+        sut.startSearch(query: "beat")
+        let olderSearch = try #require(sut.searchTask)
+        sut.startSearch(query: "beatles")
+        let latestSearch = try #require(sut.searchTask)
+        
+        await repository.complete(query: "beatles", with: beatles)
+        await latestSearch.value
+        await repository.complete(query: "beat", with: beat)
+        await olderSearch.value
+        
+        #expect(sut.tracks == beatles)
+    }
 }
