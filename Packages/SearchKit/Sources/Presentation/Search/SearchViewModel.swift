@@ -12,6 +12,10 @@ public final class SearchViewModel {
     }
 
     public func search(query: String) async {
-        tracks = (try? await searchTracks.execute(query: query)) ?? []
+        do {
+            let result = try await searchTracks.execute(query: query)
+            guard !Task.isCancelled else { return }
+            tracks = result
+        } catch { }
     }
 }

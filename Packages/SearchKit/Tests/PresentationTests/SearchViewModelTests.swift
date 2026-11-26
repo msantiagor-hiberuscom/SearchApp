@@ -16,4 +16,37 @@ struct SearchViewModelTests {
 
         #expect(sut.tracks == tracks)
     }
+
+    @Test("it should keep the current results when a search is cancelled")
+    func keepsCurrentResultsWhenSearchIsCancelled() async {
+        let queen = [Track(id: 3, name: "Bohemian Rhapsody", artistName: "Queen")]
+        let beatles = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
+        let repository = TrackRepositorySpy(tracksByQuery: ["queen": queen, "beatles": beatles])
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        await sut.search(query: "queen")
+
+        let search = Task { await sut.search(query: "beatles") }
+        search.cancel()
+        await search.value
+
+        #expect(sut.tracks == queen)
+    }
+    
+    @Test("it should not publish the results of a cancelled search that succeeds")
+    func doesNotPublishResultsOfCancelledSearchThatSucceeds() async throws {
+        let beat = [
+            Track(id: 3, name: "Dance to me beat", artistName: "James Brown"),
+            Track(id: 1, name: "Yesterday", artistName: "The Beatles")
+        ]
+        let beatles = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
+        let repository = TrackRepositorySpy(tracksByQuery: ["beat": beat, "beatles": beatles], checksCancellation: false)
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        await sut.search(query: "beat")
+
+        let search = Task { await sut.search(query: "beatles") }
+        search.cancel()
+        await search.value
+
+        #expect(sut.tracks == beat)
+    }
 }
