@@ -84,4 +84,17 @@ struct SearchViewModelTests {
 
         #expect(!sut.searchFailed)
     }
+    
+    @Test("it should cancel the previous search when a new one starts")
+    func cancelsPreviousSearchWhenNewOneStarts() async throws {
+        let repository = TrackRepositorySpy()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        sut.startSearch(query: "beat")
+        let previousSearch = try #require(sut.searchTask)
+        
+        sut.startSearch(query: "beatles")
+        
+        #expect(previousSearch.isCancelled)
+        await sut.searchTask?.value
+    }
 }
