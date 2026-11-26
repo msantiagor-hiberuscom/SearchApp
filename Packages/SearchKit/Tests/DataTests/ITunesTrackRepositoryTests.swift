@@ -49,7 +49,42 @@ struct ITunesTrackRepositoryTests {
         
         #expect(result == expectedTracks)
     }
-    
+
+    @Test("it should map the detail fields of iTunes results")
+    func mapsDetailFields() async throws {
+        let itunesJSON = Data("""
+            {
+              "resultCount": 1,
+              "results": [
+                {
+                  "trackId": 1,
+                  "trackName": "Yesterday",
+                  "artistName": "The Beatles",
+                  "collectionName": "Help!",
+                  "primaryGenreName": "Rock",
+                  "releaseDate": "1965-08-06T07:00:00Z",
+                  "artworkUrl100": "https://example.com/help/100x100bb.jpg"
+                }
+              ]
+            }
+            """.utf8)
+        let expected = Track(
+            id: 1,
+            name: "Yesterday",
+            artistName: "The Beatles",
+            albumName: "Help!",
+            genre: "Rock",
+            releaseDate: try Date("1965-08-06T07:00:00Z", strategy: .iso8601),
+            artworkURL: URL(string: "https://example.com/help/100x100bb.jpg")
+        )
+        let client = HTTPClientSpy(data: itunesJSON)
+        let sut = ITunesTrackRepository(client: client)
+
+        let result = try await sut.search(query: "beatles")
+
+        #expect(result == [expected])
+    }
+
     @Test("it should propagate client errors")
     func propagatesClientErrors() async throws {
         let client = HTTPClientSpy(error: URLError(.cannotConnectToHost))

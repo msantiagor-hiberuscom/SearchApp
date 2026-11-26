@@ -26,7 +26,9 @@ public struct ITunesTrackRepository: TrackRepository {
         }
         
         do {
-            let iTunesResponse = try JSONDecoder().decode(ITunesResponse.self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let iTunesResponse = try decoder.decode(ITunesResponse.self, from: data)
             return iTunesResponse.results.map(\.toTrack)
         } catch {
             throw URLError(.cannotParseResponse, userInfo: [NSUnderlyingErrorKey: error])
@@ -48,10 +50,20 @@ private struct ITunesTrack: Decodable {
     let trackId: Int
     let trackName: String
     let artistName: String
+    let collectionName: String?
+    let primaryGenreName: String?
+    let releaseDate: Date?
+    let artworkUrl100: URL?
 }
 
 private extension ITunesTrack {
     var toTrack: Track {
-        Track(id: trackId, name: trackName, artistName: artistName)
+        Track(id: trackId,
+              name: trackName,
+              artistName: artistName,
+              albumName: collectionName,
+              genre: primaryGenreName,
+              releaseDate: releaseDate,
+              artworkURL: artworkUrl100)
     }
 }
