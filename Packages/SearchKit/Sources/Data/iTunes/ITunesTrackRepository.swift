@@ -64,6 +64,13 @@ private extension ITunesTrack {
               albumName: collectionName,
               genre: primaryGenreName,
               releaseDate: releaseDate,
-              artworkURL: artworkUrl100)
+              artworkURL: largeArtworkURL)
+    }
+
+    // iTunes serves other artwork sizes when the size in the file name changes.
+    private var largeArtworkURL: URL? {
+        artworkUrl100.flatMap { url in
+            URL(string: url.absoluteString.replacingOccurrences(of: "100x100bb", with: "600x600bb"))
+        }
     }
 }

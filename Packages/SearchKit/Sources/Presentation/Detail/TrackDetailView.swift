@@ -33,6 +33,9 @@ struct TrackDetailView: View {
             }
         }
         .navigationTitle(track.name)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 }
 

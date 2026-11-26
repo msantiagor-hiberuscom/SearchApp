@@ -75,7 +75,7 @@ struct ITunesTrackRepositoryTests {
             albumName: "Help!",
             genre: "Rock",
             releaseDate: try Date("1965-08-06T07:00:00Z", strategy: .iso8601),
-            artworkURL: URL(string: "https://example.com/help/100x100bb.jpg")
+            artworkURL: URL(string: "https://example.com/help/600x600bb.jpg")
         )
         let client = HTTPClientSpy(data: itunesJSON)
         let sut = ITunesTrackRepository(client: client)
@@ -83,6 +83,31 @@ struct ITunesTrackRepositoryTests {
         let result = try await sut.search(query: "beatles")
 
         #expect(result == [expected])
+    }
+
+    @Test("it should request the 600x600 artwork",
+          arguments: [("https://example.com/help/100x100bb.jpg", "https://example.com/help/600x600bb.jpg"),
+                      ("https://example.com/help/artwork.jpg", "https://example.com/help/artwork.jpg")])
+    func requestsLargerArtwork(artworkURL: String, expectedURL: String) async throws {
+        let itunesJSON = Data("""
+            {
+              "resultCount": 1,
+              "results": [
+                {
+                  "trackId": 1,
+                  "trackName": "Yesterday",
+                  "artistName": "The Beatles",
+                  "artworkUrl100": "\(artworkURL)"
+                }
+              ]
+            }
+            """.utf8)
+        let client = HTTPClientSpy(data: itunesJSON)
+        let sut = ITunesTrackRepository(client: client)
+
+        let result = try await sut.search(query: "beatles")
+
+        #expect(result.map(\.artworkURL) == [URL(string: expectedURL)])
     }
 
     @Test("it should propagate client errors")

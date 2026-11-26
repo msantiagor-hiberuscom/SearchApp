@@ -68,10 +68,10 @@ The worst case, an older search that finishes after the newer one, is tested det
 
 ## Tests
 
-27 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
+28 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
 
 - **Domain (4)**: the use case against a mocked repository: results, blank queries, trimming and error propagation.
-- **Data (12)**: cache hits, misses, one entry per query, expiry at the exact TTL, refresh and errors not cached; URL building, mapping, HTTP status and invalid JSON for the iTunes repository.
+- **Data (13)**: cache hits, misses, one entry per query, expiry at the exact TTL, refresh and errors not cached; URL building, mapping (including the larger artwork URL), HTTP status and invalid JSON for the iTunes repository.
 - **Presentation (11)**: publishing results, cancelled searches, error state, cancelling the previous search and the out-of-order case; the rows and date formatting of the detail screen.
 
 The views have SwiftUI previews and were checked by hand in the simulator.
