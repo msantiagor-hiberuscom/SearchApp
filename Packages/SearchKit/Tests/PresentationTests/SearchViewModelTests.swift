@@ -59,4 +59,16 @@ struct SearchViewModelTests {
         
         #expect(sut.searchFailed)
     }
+    
+    @Test("it should not report an error when a search is cancelled")
+    func doesNotReportErrorWhenSearchIsCancelled() async {
+        let repository = TrackRepositorySpy()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+
+        let search = Task { await sut.search(query: "beatles") }
+        search.cancel()
+        await search.value
+
+        #expect(!sut.searchFailed)
+    }
 }

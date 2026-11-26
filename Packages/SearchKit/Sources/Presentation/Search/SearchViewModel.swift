@@ -19,6 +19,7 @@ public final class SearchViewModel {
             guard !Task.isCancelled else { return }
             tracks = result
         } catch {
+            guard !Task.isCancelled else { return }
             searchFailed = true
         }
     }
