@@ -88,7 +88,7 @@ struct SearchViewModelTests {
     @Test("it should cancel the previous search when a new one starts")
     func cancelsPreviousSearchWhenNewOneStarts() async throws {
         let repository = TrackRepositorySpy()
-        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository), sleep: { _ in })
         sut.startSearch(query: "beat")
         let previousSearch = try #require(sut.searchTask)
         
@@ -103,10 +103,11 @@ struct SearchViewModelTests {
         let beat = [Track(id: 3, name: "Dance to me beat", artistName: "James Brown")]
         let beatles = [Track(id: 1, name: "Yesterday", artistName: "The Beatles")]
         let repository = ControllableTrackRepository()
-        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository))
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository), sleep: { _ in })
         
         sut.startSearch(query: "beat")
         let olderSearch = try #require(sut.searchTask)
+        await repository.waitForRequest(query: "beat")
         sut.startSearch(query: "beatles")
         let latestSearch = try #require(sut.searchTask)
         
@@ -116,5 +117,32 @@ struct SearchViewModelTests {
         await olderSearch.value
         
         #expect(sut.tracks == beatles)
+    }
+    
+    @Test("it should wait for the debounce interval before searching")
+    func waitsForTheDebounceIntervalBeforeSearching() async {
+        let repository = TrackRepositorySpy()
+        let sleep = SleepSpy()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository),
+                                  debounce: .milliseconds(500), sleep: sleep.sleep(_:))
+        
+        sut.startSearch(query: "beatles")
+        await sut.searchTask?.value
+        
+        #expect(await sleep.durations == [.milliseconds(500)])
+    }
+    
+    @Test("it should not search for a query replaced during the debounce")
+    func doesNotSearchForQueryReplacedDuringDebounce() async throws {
+        let repository = TrackRepositorySpy()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository), sleep: { _ in })
+        
+        sut.startSearch(query: "bea")
+        let olderSearch = try #require(sut.searchTask)
+        sut.startSearch(query: "beatles")
+        await olderSearch.value
+        await sut.searchTask?.value
+        
+        #expect(await repository.receivedQueries == ["beatles"])
     }
 }

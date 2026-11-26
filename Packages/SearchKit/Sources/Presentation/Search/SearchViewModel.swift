@@ -9,14 +9,27 @@ public final class SearchViewModel {
     private(set) var searchTask: Task<Void, Never>?
     
     private let searchTracks: SearchTracksUseCase
+    private let debounce: Duration
+    private let sleep: @Sendable (Duration) async throws -> Void
 
-    public init(searchTracks: SearchTracksUseCase) {
+    public convenience init(searchTracks: SearchTracksUseCase, debounce: Duration = .milliseconds(300)) {
+        self.init(searchTracks: searchTracks, debounce: debounce) { try await Task.sleep(for: $0) }
+    }
+    
+    init(searchTracks: SearchTracksUseCase, debounce: Duration = .milliseconds(300),
+         sleep: @escaping @Sendable (Duration) async throws -> Void) {
         self.searchTracks = searchTracks
+        self.debounce = debounce
+        self.sleep = sleep
     }
     
     public func startSearch(query: String) {
         searchTask?.cancel()
-        searchTask = Task { await search(query: query) }
+        searchTask = Task {
+            do { try await sleep(debounce) } catch { return }
+            guard !Task.isCancelled else { return }
+            await search(query: query)
+        }
     }
 
     func search(query: String) async {

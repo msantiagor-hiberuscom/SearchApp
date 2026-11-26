@@ -12,11 +12,15 @@ actor ControllableTrackRepository: TrackRepository {
     }
     
     func complete(query: String, with tracks: [Track]) async {
+        await waitForRequest(query: query)
+        pending.removeValue(forKey: query)?.resume(returning: tracks)
+    }
+    
+    func waitForRequest(query: String) async {
         if pending[query] == nil {
             await withCheckedContinuation { continuation in
                 awaitingRequest[query] = continuation
             }
         }
-        pending.removeValue(forKey: query)?.resume(returning: tracks)
     }
 }
