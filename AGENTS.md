@@ -130,8 +130,6 @@ Domain and Data are complete. Presentation has 22 tests (17 for `SearchViewModel
 Known issues. Most are accepted limitations listed in the README's "Known limitations" section; keep both lists in sync when one is fixed or added:
 
 - The search `Task` keeps the view model alive until it finishes and is not cancelled on deinit. Accepted (searches are short); in the README.
-- `CachedTrackRepository` stores the TTL in a property misspelt `timeTolive`.
-- The trimming test is still named "it should trim the query" / `trimsQueryBeforeReturningTracks`; "it should pass the trimmed query to the repository" / `trimsQueryBeforeSearching` would be more precise.
 - Optional: localised UI strings.
 - Two concurrent misses for the same query both reach the remote (actor reentrancy, no in-flight deduplication). Accepted; in the README.
 - The cache never evicts: expired entries are replaced when the same query is searched again, but never removed. Accepted; in the README.
@@ -140,5 +138,4 @@ Known issues. Most are accepted limitations listed in the README's "Known limita
 
 The coding test is complete. Remaining work is optional; do it only if the user asks:
 
-1. **Polish**: the `timeTolive` typo and the trimming test name.
-2. **Accepted limitations** from the README (cache eviction, in-flight deduplication), each one test-first and removed from the README's list when done.
+1. **Accepted limitations** from the README (cache eviction, in-flight deduplication), each one test-first and removed from the README's list when done.

@@ -8,7 +8,7 @@ public actor CachedTrackRepository: TrackRepository {
     }
     
     private let remote: any TrackRepository
-    private let timeTolive: TimeInterval
+    private let timeToLive: TimeInterval
     private let now: @Sendable () -> Date
     private var entries: [String: Entry] = [:]
 
@@ -16,12 +16,12 @@ public actor CachedTrackRepository: TrackRepository {
                 timeToLive: TimeInterval = 300,
                 now: @escaping @Sendable () -> Date = { Date() }) {
         self.remote = remote
-        self.timeTolive = timeToLive
+        self.timeToLive = timeToLive
         self.now = now
     }
 
     public func search(query: String) async throws -> [Track] {
-        if let cached = entries[query], now().timeIntervalSince(cached.storedAt) < timeTolive {
+        if let cached = entries[query], now().timeIntervalSince(cached.storedAt) < timeToLive {
             return cached.tracks
         }
         let result = try await remote.search(query: query)
