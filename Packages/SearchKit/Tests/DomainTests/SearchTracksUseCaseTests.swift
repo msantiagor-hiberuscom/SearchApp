@@ -31,12 +31,12 @@ struct SearchTracksUseCaseTests {
         #expect(await repository.receivedQueries.isEmpty)
     }
     
-    @Test("it should trim the query",
+    @Test("it should pass the trimmed query to the repository",
           arguments: [(" beatles", "beatles"),
                       ("beatles ", "beatles"),
                       ("\tbeatles\n", "beatles"),
                       (" the beatles ", "the beatles")])
-    func trimsQueryBeforeReturningTracks(query: String, expectedQuery: String) async throws {
+    func trimsQueryBeforeSearching(query: String, expectedQuery: String) async throws {
         let repository = TrackRepositorySpy()
         let sut = SearchTracksUseCase(repository: repository)
 
