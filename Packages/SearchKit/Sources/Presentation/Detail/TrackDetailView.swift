@@ -31,11 +31,24 @@ struct TrackDetailView: View {
                     }
                 }
             }
+            
+            if let storeURL = track.storeURL {
+                Section {
+                    Link(destination: storeURL) {
+                        Label("Open in Apple Music", systemImage: "music.note")
+                    }
+                }
+            }
         }
         .navigationTitle(track.name)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            if let storeURL = track.storeURL {
+                ShareLink(item: storeURL, subject: Text(track.name), message: Text("\(track.name) by \(track.artistName)"))
+            }
+        }
     }
 }
 

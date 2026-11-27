@@ -10,7 +10,8 @@ extension Track {
         albumName: "Help!",
         genre: "Rock",
         releaseDate: Date(timeIntervalSince1970: -138_992_400),
-        artworkURL: nil
+        artworkURL: nil,
+        storeURL: URL(string: "https://music.apple.com/us/album/yesterday/1441133100?i=1441133436")
     )
 
     static let previewWithoutDetails = Track(

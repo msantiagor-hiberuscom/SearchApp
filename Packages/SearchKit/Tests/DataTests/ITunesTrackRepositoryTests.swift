@@ -63,7 +63,8 @@ struct ITunesTrackRepositoryTests {
                   "collectionName": "Help!",
                   "primaryGenreName": "Rock",
                   "releaseDate": "1965-08-06T07:00:00Z",
-                  "artworkUrl100": "https://example.com/help/100x100bb.jpg"
+                  "artworkUrl100": "https://example.com/help/100x100bb.jpg",
+                  "trackViewUrl": "https://music.example.com/album/help/1?i=1"
                 }
               ]
             }
@@ -75,7 +76,8 @@ struct ITunesTrackRepositoryTests {
             albumName: "Help!",
             genre: "Rock",
             releaseDate: try Date("1965-08-06T07:00:00Z", strategy: .iso8601),
-            artworkURL: URL(string: "https://example.com/help/600x600bb.jpg")
+            artworkURL: URL(string: "https://example.com/help/600x600bb.jpg"),
+            storeURL: URL(string: "https://music.example.com/album/help/1?i=1")
         )
         let client = HTTPClientSpy(data: itunesJSON)
         let sut = ITunesTrackRepository(client: client)

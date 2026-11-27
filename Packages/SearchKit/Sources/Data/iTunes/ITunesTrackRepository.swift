@@ -54,6 +54,7 @@ private struct ITunesTrack: Decodable {
     let primaryGenreName: String?
     let releaseDate: Date?
     let artworkUrl100: URL?
+    let trackViewUrl: URL?
 }
 
 private extension ITunesTrack {
@@ -64,7 +65,8 @@ private extension ITunesTrack {
               albumName: collectionName,
               genre: primaryGenreName,
               releaseDate: releaseDate,
-              artworkURL: largeArtworkURL)
+              artworkURL: largeArtworkURL,
+              storeURL: trackViewUrl)
     }
 
     // iTunes serves other artwork sizes when the size in the file name changes.

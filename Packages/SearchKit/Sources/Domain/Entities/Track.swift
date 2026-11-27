@@ -8,6 +8,7 @@ public struct Track: Hashable, Identifiable, Sendable {
     public let genre: String?
     public let releaseDate: Date?
     public let artworkURL: URL?
+    public let storeURL: URL?
 
     public init(id: Int,
                 name: String,
@@ -15,7 +16,8 @@ public struct Track: Hashable, Identifiable, Sendable {
                 albumName: String? = nil,
                 genre: String? = nil,
                 releaseDate: Date? = nil,
-                artworkURL: URL? = nil) {
+                artworkURL: URL? = nil,
+                storeURL: URL? = nil) {
         self.id = id
         self.name = name
         self.artistName = artistName
@@ -23,5 +25,6 @@ public struct Track: Hashable, Identifiable, Sendable {
         self.genre = genre
         self.releaseDate = releaseDate
         self.artworkURL = artworkURL
+        self.storeURL = storeURL
     }
 }
