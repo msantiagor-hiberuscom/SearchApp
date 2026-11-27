@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    package-tests:
+        name: Package test (macOS)
+        runs-on: macos-15
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Show version
+              run: swift --version
+
+            - name: Run tests
+              working-directory: Packages/SearchKit
+              run: swift test
+
+    app-build:
+        name: App build (iOS)
+        runs-on: macos-15
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Show version
+              run: xcodebuild -version
+
+            - name: Build for the iOS simulator
+              run: |
+                  xcodebuild build \
+                      -project SearchApp.xcodeproj \
+                      -scheme SearchApp \
+                      -destination 'generic/platform=iOS Simulator' \
+                      CODE_SIGNING_ALLOWED=NO

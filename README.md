@@ -1,5 +1,7 @@
 # SearchApp
 
+[![Tests](https://github.com/msantiagor-hiberuscom/SearchApp/actions/workflows/tests.yml/badge.svg)](https://github.com/msantiagor-hiberuscom/SearchApp/actions/workflows/tests.yml)
+
 A small SwiftUI app that searches songs in the iTunes catalogue and shows the details of the selected one. It is built to show a clear Data / Domain / Presentation split, cancellable searches, an in-memory cache with expiry, and unit tests for every layer.
 
 ## Running it
