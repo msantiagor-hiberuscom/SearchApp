@@ -16,6 +16,7 @@ public struct SearchView: View {
                 .toolbar {
                     if case .loading(let tracks) = viewModel.state, !tracks.isEmpty {
                         ProgressView()
+                            .accessibilityLabel("Searching")
                     }
                 }
                 .navigationDestination(for: Track.self) { track in
@@ -27,6 +28,11 @@ public struct SearchView: View {
         .disablingAutocapitalization()
         .onChange(of: query) { _, newQuery in
             viewModel.startSearch(query: newQuery)
+        }
+        .onChange(of: viewModel.state) { _, newState in
+            if let announcement = newState.accessibilityAnnouncement {
+                AccessibilityNotification.Announcement(announcement).post()
+            }
         }
     }
 }
@@ -43,6 +49,7 @@ private extension SearchView {
             )
         case .loading(let tracks) where tracks.isEmpty:
             ProgressView()
+                .accessibilityLabel("Searching")
         case .loading(let tracks), .loaded(let tracks):
             List(tracks) { track in
                 NavigationLink(value: track) {

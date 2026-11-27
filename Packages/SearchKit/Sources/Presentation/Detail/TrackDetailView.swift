@@ -22,6 +22,8 @@ struct TrackDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
             }
 
             if !detail.fields.isEmpty {
@@ -63,5 +65,12 @@ struct TrackDetailView: View {
     NavigationStack {
         TrackDetailView(track: .previewWithoutDetails)
     }
+}
+
+#Preview("Accessibility text size") {
+    NavigationStack {
+        TrackDetailView(track: .previewYesterday)
+    }
+    .dynamicTypeSize(.accessibility3)
 }
 #endif

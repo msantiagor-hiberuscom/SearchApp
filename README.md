@@ -72,13 +72,18 @@ The worst case, an older search that finishes after the newer one, is tested det
 
 ## Tests
 
-37 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
+39 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
 
 - **Domain (4)**: the use case against a mocked repository: results, blank queries, trimming and error propagation.
 - **Data (13)**: cache hits, misses, one entry per query, expiry at the exact TTL, refresh and errors not cached; URL building, mapping (including the larger artwork URL), HTTP status and invalid JSON for the iTunes repository.
-- **Presentation (20)**: every search state (idle, loading, loaded, empty, failed, blank query), cancelled searches, cancelling the previous search, debouncing and the out-of-order case; the rows and date formatting of the detail screen.
+- **Presentation (22)**: every search state (idle, loading, loaded, empty, failed, blank query), cancelled searches, cancelling the previous search, debouncing and the out-of-order case; the VoiceOver announcement of each search outcome; the rows and date formatting of the detail screen.
 
 The views have SwiftUI previews and were checked by hand in the simulator.
+
+## Accessibility
+
+- **VoiceOver** announces the outcome of each search ("12 results", "No results", "Search failed"), reads each result row as one element, skips the decorative artwork and reads the detail header as a heading.
+- **Dynamic Type**: every text uses system text styles; at accessibility sizes the result rows stack the artwork above the text and let long names wrap.
 
 ## Known limitations
 
