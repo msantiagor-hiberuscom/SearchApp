@@ -84,7 +84,7 @@ struct SearchViewModelTests {
         await sut.search(query: "beatles")
         try #require(sut.state == .loaded(tracks))
 
-        await sut.search(query: query)
+        sut.startSearch(query: query)
 
         #expect(sut.state == .idle)
     }
@@ -197,6 +197,19 @@ struct SearchViewModelTests {
         #expect(sut.state == .loading([]))
         sut.searchTask?.cancel()
         await sut.searchTask?.value
+    }
+
+    @Test("it should not wait for the debounce when the query is blank", arguments: ["", "   ", "\n"])
+    func doesNotWaitForDebounceWhenQueryIsBlank(query: String) async {
+        let repository = TrackRepositorySpy()
+        let sleep = SleepSpy()
+        let sut = SearchViewModel(searchTracks: SearchTracksUseCase(repository: repository), sleep: sleep.sleep(_:))
+
+        sut.startSearch(query: query)
+        await sut.searchTask?.value
+
+        #expect(await sleep.durations == [])
+        #expect(sut.searchTask == nil)
     }
 
     @Test("it should wait for the debounce interval before searching")

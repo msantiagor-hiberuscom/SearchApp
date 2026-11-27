@@ -26,6 +26,11 @@ public final class SearchViewModel {
     public func startSearch(query: String) {
         latestSearchId += 1
         searchTask?.cancel()
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            state = .idle
+            searchTask = nil
+            return
+        }
         searchTask = Task {
             do { try await sleep(debounce) } catch { return }
             guard !Task.isCancelled else { return }
@@ -36,10 +41,6 @@ public final class SearchViewModel {
     func search(query: String) async {
         let searchId = latestSearchId
         let previousState = state
-        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            state = .idle
-            return
-        }
         state = .loading(displayedTracks)
         do {
             let result = try await searchTracks.execute(query: query)

@@ -57,7 +57,7 @@ The view calls `SearchViewModel.startSearch(query:)` every time the text changes
 4. **does not report a cancellation as a failure.** The same check runs in the `catch`, so only real errors move the state to `failed`;
 5. **restores the previous state when the latest search is cancelled**, so a cancellation never leaves the screen loading. Each search takes a number when it is scheduled, before the debounce; a cancelled search restores only if no newer one has started since, otherwise it would hide the newer search's results.
 
-The view model publishes a single `SearchState` (`idle`, `loading(tracks)`, `loaded(tracks)`, `empty`, `failed`) that the view switches on, so it cannot show an error and a list at the same time. A blank query goes back to `idle` without calling the use case. While a search runs, `loading` keeps the tracks already on screen, so the list stays visible with a small spinner in the toolbar instead of flashing.
+The view model publishes a single `SearchState` (`idle`, `loading(tracks)`, `loaded(tracks)`, `empty`, `failed`) that the view switches on, so it cannot show an error and a list at the same time. A blank query goes back to `idle` at once, without waiting for the debounce or calling the use case. While a search runs, `loading` keeps the tracks already on screen, so the list stays visible with a small spinner in the toolbar instead of flashing.
 
 The worst case, an older search that finishes after the newer one, is tested deterministically: a controllable repository double makes each search wait until the test completes it, in whatever order the test chooses.
 
@@ -72,11 +72,11 @@ The worst case, an older search that finishes after the newer one, is tested det
 
 ## Tests
 
-36 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
+37 tests with [Swift Testing](https://developer.apple.com/xcode/swift-testing/), written test-first:
 
 - **Domain (4)**: the use case against a mocked repository: results, blank queries, trimming and error propagation.
 - **Data (13)**: cache hits, misses, one entry per query, expiry at the exact TTL, refresh and errors not cached; URL building, mapping (including the larger artwork URL), HTTP status and invalid JSON for the iTunes repository.
-- **Presentation (19)**: every search state (idle, loading, loaded, empty, failed, blank query), cancelled searches, cancelling the previous search, debouncing and the out-of-order case; the rows and date formatting of the detail screen.
+- **Presentation (20)**: every search state (idle, loading, loaded, empty, failed, blank query), cancelled searches, cancelling the previous search, debouncing and the out-of-order case; the rows and date formatting of the detail screen.
 
 The views have SwiftUI previews and were checked by hand in the simulator.
 
