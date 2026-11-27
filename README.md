@@ -28,7 +28,7 @@ The Xcode project is generated with [XcodeGen](https://github.com/yonaskolb/Xcod
 https://itunes.apple.com/search?term=<query>&entity=song
 ```
 
-It needs no key or account, answers quickly, and every result carries enough data for the detail screen: name, artist, album, genre, release date and artwork.
+It needs no key or account, answers quickly, and every result carries enough data for the detail screen: name, artist, album, genre, release date, artwork and a link to the song in Apple Music.
 
 ## Architecture
 
@@ -40,7 +40,7 @@ Presentation ──▶ Domain ◀── Data
 
 - **Domain** has no dependencies: the `Track` entity, the `TrackRepository` protocol and `SearchTracksUseCase`, which trims the query, skips blank queries and propagates errors unchanged.
 - **Data** implements `TrackRepository`: `ITunesTrackRepository` calls the API through a small `HTTPClient` protocol (implemented by `URLSession`) and maps the response to `Track`; `CachedTrackRepository` adds the cache on top.
-- **Presentation** knows only Domain: `SearchViewModel`, `TrackDetail` (the formatted rows of the detail screen) and the SwiftUI views.
+- **Presentation** knows only Domain: `SearchViewModel` and the `SearchState` it publishes, `TrackDetail` (the formatted rows of the detail screen) and the SwiftUI views.
 - **The app target** is only the composition root (`SearchApp/SearchAppApp.swift`), the one place that knows every layer:
 
   ```
@@ -57,11 +57,15 @@ The view calls `SearchViewModel.startSearch(query:)` every time the text changes
 2. **debounces the search**: each task waits 300 ms before calling the use case, so a query replaced while typing is cancelled during the wait and never reaches the network. The wait is injected, so tests do not sleep;
 3. **never publishes the outcome of a cancelled search.** After the use case returns it checks `Task.isCancelled` before touching the state. A thrown error is not enough on its own: a cache hit answers immediately and does not throw even if its task was cancelled;
 4. **does not report a cancellation as a failure.** The same check runs in the `catch`, so only real errors move the state to `failed`;
-5. **restores the previous state when the latest search is cancelled**, so a cancellation never leaves the screen loading. Each search takes a number when it is scheduled, before the debounce; a cancelled search restores only if no newer one has started since, otherwise it would hide the newer search's results.
+5. **restores the previous state when the latest search is cancelled**, so a cancellation never leaves the screen loading. Each search takes a number when it is scheduled, before the debounce; a cancelled search restores only if no newer one has been scheduled since, otherwise it would hide the newer search's results.
 
 The view model publishes a single `SearchState` (`idle`, `loading(tracks)`, `loaded(tracks)`, `empty`, `failed`) that the view switches on, so it cannot show an error and a list at the same time. A blank query goes back to `idle` at once, without waiting for the debounce or calling the use case. While a search runs, `loading` keeps the tracks already on screen, so the list stays visible with a small spinner in the toolbar instead of flashing.
 
 The worst case, an older search that finishes after the newer one, is tested deterministically: a controllable repository double makes each search wait until the test completes it, in whatever order the test chooses.
+
+## Detail screen
+
+Selecting a result opens its detail: the artwork (requested at 600×600, as the API's 100×100 looks soft at that size), name, artist, album, genre and release date. The date follows the device locale but is always shown in UTC, because iTunes release dates are calendar days in UTC. Missing fields are left out. When the song has an Apple Music link, the screen also offers a share button in the toolbar and an "Open in Apple Music" link.
 
 ## Cache
 
@@ -81,6 +85,8 @@ The worst case, an older search that finishes after the newer one, is tested det
 - **Presentation (22)**: every search state (idle, loading, loaded, empty, failed, blank query), cancelled searches, cancelling the previous search, debouncing and the out-of-order case; the VoiceOver announcement of each search outcome; the rows and date formatting of the detail screen.
 
 The views have SwiftUI previews and were checked by hand in the simulator.
+
+GitHub Actions runs `swift test` on macOS and builds the app for the iOS simulator on every push to `main` and every pull request.
 
 ## Accessibility
 
